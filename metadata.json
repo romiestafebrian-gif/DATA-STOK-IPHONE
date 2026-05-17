@@ -1,0 +1,6 @@
+{
+  "name": "Isecond Store - iPhone Inventory",
+  "description": "Sistem manajemen stok iPhone dengan fitur CRUD, laporan grafik, dan notifikasi stok menipis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

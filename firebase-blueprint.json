@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "InventoryItem": {
+      "title": "Inventory Item",
+      "description": "Represents an iPhone in the inventory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "enum": ["Iphone 11", "Iphone 12", "Iphone 13", "Iphone 14", "Iphone 15", "Iphone 16", "Iphone 17", "Iphone 18"] },
+        "series": { "type": "string", "enum": ["Reguler", "Pro", "Pro Max"] },
+        "storage": { "type": "string", "enum": ["128 GB", "256 GB", "512 GB"] },
+        "category": { "type": "string", "enum": ["Inter", "Ibox", "Blibli"] },
+        "date": { "type": "string", "format": "date-time" },
+        "quantity": { "type": "number" },
+        "buyPrice": { "type": "number" },
+        "sellPrice": { "type": "number" },
+        "supplier": { "type": "string" },
+        "type": { "type": "string", "enum": ["IN", "OUT"] }
+      },
+      "required": ["name", "series", "storage", "category", "date", "quantity", "type"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user roles",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["Admin", "User"] }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "AppSettings": {
+      "title": "App Settings",
+      "description": "Global settings for WhatsApp notifications",
+      "type": "object",
+      "properties": {
+        "waNumber": { "type": "string" },
+        "waToken": { "type": "string" },
+        "lowStockThreshold": { "type": "number" }
+      }
+    }
+  },
+  "firestore": {
+    "inventory": {
+      "schema": "InventoryItem",
+      "description": "Collection of all stock transactions (IN and OUT)"
+    },
+    "users": {
+      "schema": "UserProfile",
+      "description": "User profiles and roles"
+    },
+    "settings": {
+      "schema": "AppSettings",
+      "description": "App-wide configurations"
+    }
+  }
+}

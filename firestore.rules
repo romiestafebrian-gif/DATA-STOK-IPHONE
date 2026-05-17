@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 64 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isSpecialAdmin() {
+      return request.auth.token.email == 'romiestafebrian@gmail.com';
+    }
+
+    // Role check - only admin can perform specific actions
+    // Admin check relies on the user record in Firestore or special email
+    function isAdmin() {
+      return isSignedIn() && (
+             isSpecialAdmin() ||
+             (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'User') == 'Admin')
+      );
+    }
+
+    // --- Rules ---
+
+    // Connection testing
+    match /test/connection {
+      allow read: if isSignedIn();
+    }
+
+    // User profiles
+    match /settings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      
+      function isValidUser(data) {
+        return data.uid == request.auth.uid &&
+               (data.email == null || data.email is string) &&
+               data.role in ['Admin', 'User'] &&
+               data.keys().hasAll(['uid', 'email', 'role']) &&
+               data.keys().size() == 3;
+      }
+
+      allow create: if isSignedIn() && request.auth.uid == userId && 
+                    (isValidUser(incoming()) || isSpecialAdmin());
+      
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin()) &&
+                    // Users cannot change their own roles unless they are already Admin or special admin
+                    (incoming().role == existing().role || isAdmin()) &&
+                    incoming().uid == existing().uid;
+    }
+
+    // Inventory
+    match /inventory/{itemId} {
+      // List rules: Pillar 8 forbids expensive lookups (get/exists)
+      // Here we allow all authenticated users to read inventory data
+      allow read: if isSignedIn();
+
+      function isValidInventory(data) {
+        return data.name in ["Iphone 11", "Iphone 12", "Iphone 13", "Iphone 14", "Iphone 15", "Iphone 16", "Iphone 17", "Iphone 18"] &&
+               data.series in ["Reguler", "Pro", "Pro Max"] &&
+               data.storage in ["128 GB", "256 GB", "512 GB"] &&
+               data.category in ["Inter", "Ibox", "Blibli"] &&
+               data.quantity is int && data.quantity >= 0 &&
+               data.type in ['IN', 'OUT'] &&
+               data.date is string && // ISO Date string
+               data.supplier is string && data.supplier.size() <= 200 &&
+               // Optional price fields strictly validated if present
+               (!('buyPrice' in data) || (data.buyPrice is number && data.buyPrice >= 0)) &&
+               (!('sellPrice' in data) || (data.sellPrice is number && data.sellPrice >= 0));
+      }
+
+      allow create: if isAdmin() && isValidId(itemId) && 
+                    isValidInventory(incoming()) &&
+                    incoming().keys().hasAll(['name', 'series', 'storage', 'category', 'date', 'quantity', 'supplier', 'type']);
+      
+      allow update: if isAdmin() && isValidId(itemId) && 
+                    isValidInventory(incoming());
+      
+      allow delete: if isAdmin() && isValidId(itemId);
+    }
+  }
+}
